@@ -1,0 +1,65 @@
+name: Apply brand logo
+
+# Re-applies the custom logo assets stored under brand/assets/.
+# Run it manually after syncing upstream (an upstream sync overwrites the
+# logo files with the original artwork), or let it run automatically:
+# any push that touches a logo target path restores the brand version
+# and commits it back. When everything already matches it is a no-op.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "NodeWarden.png"
+      - "NodeWarden.svg"
+      - "webapp/public/nodewarden-logo.svg"
+      - "webapp/public/nodewarden-logo-bg.svg"
+      - "webapp/public/nodewarden-wordmark.svg"
+      - "webapp/public/icon-source.svg"
+      - "webapp/public/icon-512.png"
+      - "webapp/public/icon-192.png"
+      - "webapp/public/apple-touch-icon.png"
+      - "webapp/public/logo-64.png"
+      - "webapp/public/favicon-32.png"
+      - "webapp/public/favicon.ico"
+      - "brand/**"
+      - "scripts/apply-brand-logo.py"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: brand-logo
+  cancel-in-progress: false
+
+jobs:
+  apply-brand-logo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore brand logo assets
+        run: python3 scripts/apply-brand-logo.py
+
+      - name: Commit if anything changed
+        run: |
+          if [ -n "$(git status --porcelain -- NodeWarden.png NodeWarden.svg webapp/public)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add NodeWarden.png NodeWarden.svg \
+              webapp/public/nodewarden-logo.svg \
+              webapp/public/nodewarden-logo-bg.svg \
+              webapp/public/nodewarden-wordmark.svg \
+              webapp/public/icon-source.svg \
+              webapp/public/icon-512.png \
+              webapp/public/icon-192.png \
+              webapp/public/apple-touch-icon.png \
+              webapp/public/logo-64.png \
+              webapp/public/favicon-32.png \
+              webapp/public/favicon.ico
+            git commit -m "chore(brand): re-apply PR #195 logo assets"
+            git push
+          else
+            echo "Brand logo already up to date, nothing to commit."
+          fi
